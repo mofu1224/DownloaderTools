@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DownloaderTools</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">本文へ移動</a>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="DownloaderTools ホーム">DownloaderTools</a>
+    <nav aria-label="メインナビゲーション">
+      <button data-tab="download" aria-current="page"><span aria-hidden="true">↧</span> ダウンロード</button>
+      <button data-tab="history"><span aria-hidden="true">◷</span> 履歴</button>
+      <button data-tab="credentials"><span aria-hidden="true">⚿</span> 認証</button>
+      <button data-tab="settings"><span aria-hidden="true">⚙</span> 設定</button>
+    </nav>
+    <div class="utilities"><span id="connection">接続しています…</span><button id="theme" aria-label="ダークモード" aria-pressed="false"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path class="moon" d="M20 14A8 8 0 0 1 10 4a8.5 8.5 0 1 0 10 10Z"/><g class="sun"><circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/></g></svg></button></div>
+  </header>
+  <main id="main" tabindex="-1">
+    <header class="page-header"><h1 id="page-title">ダウンロード</h1><p id="page-description">URLを追加して、動画と画像をまとめて保存。</p></header>
+    <div id="notice" class="notice" role="status" hidden></div>
+    <section id="panel-download" aria-label="ダウンロード">
+      <form id="download-form" class="card">
+        <fieldset class="segmented"><legend class="sr-only">メディアの種類</legend><label><input type="radio" name="kind" value="video" checked> 動画・音声</label><label><input type="radio" name="kind" value="gallery"> 画像・アルバム</label></fieldset>
+        <label for="urls">URL <span class="label-hint">1行に1件・最大100件</span></label>
+        <textarea id="urls" rows="3" required placeholder="https://…" spellcheck="false"></textarea>
+        <details class="download-options"><summary id="options-toggle">保存オプション</summary>
+        <div class="form-grid" id="video-options"><label>保存形式<select id="container"><option value="original">元の形式（最高効率）</option><option value="mp4">MP4（H.264 / AAC・必要時変換）</option><option value="mkv">MKV</option><option value="audio">音声のみ（元の形式）</option><option value="mp3">MP3（変換あり）</option></select></label><label>解像度の上限<select id="height"><option value="720">720p</option><option value="1080" selected>1080p</option><option value="1440">1440p</option><option value="2160">2160p / 4K</option><option value="4320">4320p / 8K</option></select></label><label class="checkbox"><input id="playlist" type="checkbox">プレイリストを取得</label></div>
+        <div id="gallery-options" hidden><label>取得対象<select id="media-policy"><option value="images">画像のみ</option><option value="all">画像・サイト内動画（元の形式）</option></select></label><p class="help">期間指定はサイト別の日時契約検証後に有効化されます。</p></div>
+        <div class="form-grid"><label>認証Cookie<select id="credential"><option value="">使用しない</option></select></label><label>保存先<select id="output-root"><option value="default">標準 · downloads</option></select></label></div>
+        </details>
+        <div class="form-footer"><button type="submit" class="primary" id="submit-download">＋ キューに追加</button></div>
+      </form>
+      <section class="queue-section" aria-labelledby="queue-title"><div class="section-heading"><h2 id="queue-title">キュー</h2><button class="text-button" id="refresh">更新 ↻</button></div>
+        <dl class="summary"><div><dt>実行中</dt><dd id="running-count">—</dd></div><div><dt>待機・一時停止</dt><dd id="waiting-count">—</dd></div><div><dt>保存済み</dt><dd id="saved-count">—</dd></div></dl>
+        <div id="queue-list" class="queue-list"></div></section>
+    </section>
+    <section id="panel-history" aria-label="履歴" hidden><div class="section-heading"><h2>取得履歴</h2><button id="history-refresh" class="text-button">更新 ↻</button></div><div id="history-list" class="queue-list"></div><button id="more-history" class="secondary">続きを読み込む</button></section>
+    <section id="panel-credentials" aria-label="認証" hidden><form id="cookie-form" class="card"><h2>Cookieを取り込む</h2><p class="help">Netscape TXT / ブラウザ拡張から書き出したJSONに対応。CookieはこのPC内に保存されます。</p><label>表示名<input id="cookie-name" required maxlength="80" placeholder="例: メインアカウント"></label><label>Cookieファイル<input id="cookie-file" type="file" accept=".txt,.json" required></label><button class="primary" type="submit">新しい版として取り込む</button></form><div id="credential-list" class="queue-list"></div></section>
+    <section id="panel-settings" aria-label="設定" hidden>
+      <form id="settings-form" class="card"><h2>実行予算</h2><p class="help">同一サイトは1件、後処理を伴う動画も最大1件です。並列数は自動で増やしません。</p><div class="form-grid"><label>全体の並列数<input id="total-slots" type="number" min="1" max="4" required></label><label>動画レーン<input id="video-slots" type="number" min="1" max="2" required></label><label>画像レーン<input id="gallery-slots" type="number" min="1" max="2" required></label><label>Source実行上限（時間）<input id="time-budget" type="number" min="1" max="168" required></label></div><button class="primary" type="submit">設定を保存</button></form>
+      <div class="card"><h2>保存先</h2><div id="roots-list"></div><form id="root-form" class="inline-form"><label class="grow">追加するローカルフォルダ<input id="root-path" required placeholder="D:\Media またはプロジェクト内の相対パス"></label><button class="secondary" type="submit">検証して登録</button></form><p class="help">NTFS / APFS、空き容量2 GiB以上が必要です。</p></div>
+      <div class="card"><h2>ツールセット</h2><p class="help">切替は新しい受付に反映されます。既存Sourceは固定した版を使用します。</p><div id="toolsets-list"></div><div class="inline-form"><label class="grow">有効版<select id="toolset-choice"></select></label><button id="activate-toolset" class="secondary">検証して切替</button></div><button id="update-toolset" class="secondary">公式安定版を取得・検証</button><p id="update-status" class="help"></p></div>
+      <div class="card"><h2>データの保全</h2><p class="help">バックアップには設定・履歴・元URLが含まれます。Cookie本文と保存メディアは含まれません。</p><button id="backup" class="secondary">DBバックアップを作成</button><details><summary>診断情報</summary><pre id="diagnostics"></pre></details></div>
+    </section>
+  </main>
+  <dialog id="detail-dialog"><div class="section-heading"><h2>Sourceの詳細</h2><button id="close-detail" class="text-button" aria-label="詳細を閉じる">閉じる ×</button></div><div id="detail-content"></div><h3>実行ログ</h3><pre id="detail-log">読み込んでいます…</pre></dialog>
+</body>
+</html>

@@ -1,0 +1,20 @@
+:root {
+  color-scheme: light;
+  --background: #fafafa;
+  --surface: #fff;
+  --field: #fafafa;
+  --text: #1a1a1a;
+  --muted: #626262;
+  --border: #dcdcdc;
+  --raised: #ededed;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #181818;
+  --surface: #222;
+  --field: #1c1c1c;
+  --text: #eee;
+  --muted: #b0b0b0;
+  --border: #474747;
+  --raised: #333;
+}
