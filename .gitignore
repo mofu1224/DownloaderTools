@@ -35,3 +35,11 @@ Thumbs.db
 /IMPLEMENTATION.md
 /PORTABILITY.md
 /RELEASE_CHECKLIST.md
+
+# ローカル認証情報とブラウザーの通信記録
+.git-credentials
+.netrc
+id_rsa
+id_ed25519
+credentials.json
+*.har
