@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from .domain import Profile
+from .gallery_dates import bounds
 from .paths import atomic_json, root_path
 
 
@@ -116,6 +117,10 @@ def build_command(source: dict, manifest: dict, work: Path, cookie: Path | None)
         }
         if profile.media_policy == "images":
             configuration["extractor"]["dt-images-only"] = True
+        if profile.date_from or profile.date_to:
+            configuration["extractor"]["dt-date-bounds"] = bounds(
+                profile.date_from, profile.date_to, profile.timezone
+            )
         config_path = work / "gallery-config.json"
         atomic_json(config_path, configuration)
         command = [

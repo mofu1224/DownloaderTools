@@ -20,9 +20,11 @@ if not __package__:
         identity_hash,
         video_identity,
     )
+    from downloader_tools.gallery_dates import skip_reason
     from downloader_tools.media_policy import IMAGES_ONLY, NON_IMAGE_EXTENSIONS
 else:
     from .engine_metadata import completion, gallery_identity, identity_hash, video_identity
+    from .gallery_dates import skip_reason
     from .media_policy import IMAGES_ONLY, NON_IMAGE_EXTENSIONS
 
 
@@ -67,6 +69,21 @@ class StructuredDownloadJob(job.DownloadJob):
     def __init__(self, url, parent=None):
         super().__init__(url, parent)
         self.out = StructuredOutput()
+        extractor = self.extractor
+        if (
+            extractor.config("dt-date-bounds") is not None
+            and extractor.category == "pixiv"
+            and extractor.subcategory in {"work", "artworks"}
+        ):
+            works = extractor.works
+
+            def dated_works():
+                for work in works():
+                    # 上流はキーを直接参照する。欠落は日時不明として後続作品へ進める。
+                    work.setdefault("create_date", None)
+                    yield work
+
+            extractor.works = dated_works
 
     def initialize(self, kwdict=None):
         super().initialize(kwdict)
@@ -84,13 +101,23 @@ class StructuredDownloadJob(job.DownloadJob):
         kwdict["dt_storage"] = gallery_identity(
             self.extractor.category, self.extractor.url, url, kwdict
         )
-        if self.extractor.config("dt-images-only", False) and (
-            str(extension).lower() in NON_IMAGE_EXTENSIONS or url.startswith("ytdl:")
+        limits = self.extractor.config("dt-date-bounds")
+        reason = (
+            skip_reason(self.extractor.category, self.extractor.subcategory, kwdict, limits)
+            if limits is not None
+            else None
+        )
+        if (
+            not reason
+            and self.extractor.config("dt-images-only", False)
+            and (str(extension).lower() in NON_IMAGE_EXTENSIONS or url.startswith("ytdl:"))
         ):
+            reason = IMAGES_ONLY
+        if reason:
             event = completion(
                 kwdict, self.extractor.category, self.extractor.url, kwdict["dt_storage"]
             )
-            event.update(path="", policy_skip=IMAGES_ONLY)
+            event.update(path="", policy_skip=reason)
             print("DT_ITEM\t" + json.dumps(event, ensure_ascii=True), flush=True)
             return
         return super().handle_url(url, kwdict)

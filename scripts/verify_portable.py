@@ -28,6 +28,7 @@ PUBLISHED_FILES = (
     ".python-version",
     ".gitignore",
     "README.md",
+    "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "Start-DownloaderTools.bat",
 )

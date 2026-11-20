@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "downloader-tools"
 version = "0.1.0"
+license = "MIT"
 description = "永続キューを持つポータブル動画・画像ダウンローダー"
 requires-python = ">=3.14,<3.15"
 dependencies = [

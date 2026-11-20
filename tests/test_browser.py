@@ -95,6 +95,17 @@ def test_browser_create_pause_history_settings_and_mobile(tmp_path):
             page.keyboard.press("Enter")
             page.keyboard.press("Tab")
             assert page.locator(":focus").get_attribute("id") == "container"
+            page.get_by_label("画像・アルバム").check()
+            expect(page.locator("#date-from")).to_be_disabled()
+            page.locator("#urls").fill("https://www.pixiv.net/artworks/123")
+            page.get_by_label("開始日").fill("2026-11-01")
+            page.get_by_label("終了日").fill("2026-11-01")
+            page.get_by_label("タイムゾーン").fill("America/New_York")
+            with page.expect_response("**/api/v1/profiles") as created:
+                page.get_by_role("button", name="＋ キューに追加").click()
+            profile = created.value.json()
+            assert profile["date_from"] == profile["date_to"] == "2026-11-01"
+            assert profile["timezone"] == "America/New_York"
             assert not errors
             browser.close()
     finally:

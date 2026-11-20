@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 from .domain import Profile, digest
 from .engine_metadata import AUTHOR_KEYS, TITLE_KEYS, find_text, text_value
+from .gallery_dates import OUTSIDE, UNKNOWN
 from .media_policy import IMAGES_ONLY, NON_IMAGE_EXTENSIONS, MediaPolicySkip
 from .paths import contained, root_path
 from .store import Store, uid
@@ -414,10 +415,14 @@ class Publisher:
             profile = Profile.model_validate_json(source["profile"])
             images_only = profile.kind == "gallery" and profile.media_policy == "images"
             if event.get("policy_skip"):
-                if not images_only or event["policy_skip"] != IMAGES_ONLY:
+                reason = event["policy_skip"]
+                if not (
+                    (images_only and reason == IMAGES_ONLY)
+                    or ((profile.date_from or profile.date_to) and reason in (OUTSIDE, UNKNOWN))
+                ):
                     raise ValueError("ENGINE_PROTOCOL_INVALID")
-                await self.record_policy_skip(source, event)
-                return IMAGES_ONLY
+                await self.record_policy_skip(source, event, reason)
+                return reason
             try:
                 intent = await self.prepare(source, event)
             except MediaPolicySkip:
@@ -427,7 +432,7 @@ class Publisher:
                 return IMAGES_ONLY
             await self.commit(intent)
 
-    async def record_policy_skip(self, source, event):
+    async def record_policy_skip(self, source, event, reason=IMAGES_ONLY):
         key = event["media_key"]
         if not isinstance(key, str) or not key or len(key) > 2048:
             raise ValueError("MEDIA_KEY_INVALID")
@@ -435,7 +440,7 @@ class Publisher:
         def record(conn):
             inserted = conn.execute(
                 "INSERT OR IGNORE INTO policy_skips VALUES(?,?,?,?)",
-                (source["id"], key, IMAGES_ONLY, time.time()),
+                (source["id"], key, reason, time.time()),
             ).rowcount
             if inserted:
                 conn.execute(

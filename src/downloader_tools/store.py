@@ -9,6 +9,7 @@ from typing import Any
 from uuid import uuid4
 
 from .domain import TERMINAL, BatchRequest, Profile, Settings, digest, provider
+from .gallery_dates import GALLERY_VERSION, supports_url
 
 
 def uid() -> str:
@@ -175,8 +176,6 @@ class Store:
             profile = Profile.model_validate_json(row[0])
             if profile.kind != values["kind"]:
                 raise ValueError("PROFILE_KIND_MISMATCH")
-            if profile.date_from or profile.date_to:
-                raise ValueError("DATE_CONTRACT_UNVERIFIED")
             if (
                 conn.execute(
                     "SELECT 1 FROM output_roots WHERE id=?", (values["output_root_id"],)
@@ -192,7 +191,14 @@ class Store:
                 ).fetchone()
             ):
                 raise ValueError("CREDENTIAL_REPLACEMENT_REQUIRED")
-            tool = conn.execute("SELECT id FROM toolsets WHERE active=1").fetchone()
+            tool = conn.execute("SELECT id,manifest FROM toolsets WHERE active=1").fetchone()
+            if (profile.date_from or profile.date_to) and (
+                not all(supports_url(url) for url in values["urls"])
+                or not tool
+                or json.loads(tool["manifest"]).get("versions", {}).get("gallery-dl")
+                != GALLERY_VERSION
+            ):
+                raise ValueError("DATE_CONTRACT_UNVERIFIED")
             tool_id = tool[0] if tool else "unavailable"
             batch_id = uid()
             conn.execute(

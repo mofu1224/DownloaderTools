@@ -90,6 +90,97 @@ def media_server(tmp_path):
 
 
 @pytest.mark.parametrize(
+    "day,posted,expected",
+    [
+        (
+            "2026-03-08",
+            [
+                "2026-03-09T04:00:00Z",
+                "2026-03-08T05:00:00Z",
+                "2026-03-08T04:59:59Z",
+                None,
+                "2026-03-09T03:59:59.999999Z",
+            ],
+            [2, 5],
+        ),
+        (
+            "2026-11-01",
+            [
+                "2026-11-02T05:00:00Z",
+                "2026-11-01T01:30:00-04:00",
+                "2026-11-01T01:30:00-05:00",
+                None,
+                "2026-11-01T23:59:59-05:00",
+            ],
+            [2, 3, 5],
+        ),
+    ],
+)
+def test_pixiv_date_contract_saves_only_in_range(media_server, tmp_path, day, posted, expected):
+    """作品一覧の取得元だけをfixtureへ置換し、固定版extractorと実転送を通す。"""
+    from downloader_tools.domain import Profile
+    from downloader_tools.engines import build_command, parse_line
+    from downloader_tools.paths import root_path
+
+    work = tmp_path / "work"
+    source = {
+        "kind": "gallery",
+        "url": "https://www.pixiv.net/users/123/artworks",
+        "profile": Profile(
+            kind="gallery", date_from=day, date_to=day, timezone="America/New_York"
+        ).model_dump_json(),
+    }
+    manifest = json.loads(
+        next((root_path() / "runtime/toolsets").glob("*/manifest.json")).read_text()
+    )
+    command = build_command(source, manifest, work, None)
+    works = []
+    for i, stamp in enumerate(posted, 1):
+        # 除外予定のURLは存在しない。誤って転送すると実エンジンが失敗する。
+        url = f"{media_server}/{'sample' if i in expected else 'missing'}.png?i={i}"
+        works.append(
+            dict(
+                id=i,
+                user={"id": 1},
+                tags=[],
+                type="illust",
+                x_restrict=0,
+                create_date=stamp,
+                meta_single_page={"original_image_url": url},
+                image_urls={},
+                meta_pages=[],
+            )
+        )
+    i = command.index(str(root_path() / "src/downloader_tools/gallery_engine.py"))
+    for work_item in works:
+        if work_item["create_date"] is None:
+            del work_item["create_date"]
+    entry = command[i]
+    code = (
+        "import runpy,sys,json; from gallery_dl.extractor.pixiv import PixivArtworksExtractor; "
+        f"PixivArtworksExtractor.works=lambda self: json.loads({json.dumps(works)!r}); "
+        f"sys.argv[0]={entry!r}; runpy.run_path(sys.argv[0],run_name='__main__')"
+    )
+    run = subprocess.run(
+        command[:i] + ["-c", code] + command[i + 1 :],
+        capture_output=True,
+        encoding="utf-8",
+        timeout=30,
+    )
+    assert run.returncode == 0, run.stderr
+    events = [parse_line(line) for line in run.stdout.splitlines() if line.startswith("DT_ITEM\t")]
+    assert [int(e["id"]) for e in events if e["path"]] == expected
+    assert {Path(e["path"]) for e in events if e["path"]} == set((work / "payload").glob("*"))
+    for e in events:
+        if e["path"]:
+            assert Path(e["path"]).read_bytes() == (tmp_path / "sample.png").read_bytes()
+    assert [e.get("policy_skip") for e in events] == [
+        None if i in expected else "DATE_UNKNOWN" if stamp is None else "DATE_OUTSIDE_RANGE"
+        for i, stamp in enumerate(posted, 1)
+    ]
+
+
+@pytest.mark.parametrize(
     "kind,extension",
     [
         ("video", "mp4"),

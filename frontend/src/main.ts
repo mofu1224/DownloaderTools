@@ -123,7 +123,10 @@ async function followLog(id:string){
   }catch(error){if(detailSource===id)notice(`ログ取得: ${(error as Error).message}`,true);delay=5000;}
   if(detailSource===id)detailTimer=window.setTimeout(()=>void followLog(id),delay);
 }
-async function detail(id:string){const source=await api<Source&{profile:unknown;artifacts:{relative_path:string;valid:boolean}[];references:number}>('sources/'+id);const content=$('detail-content');content.replaceChildren(node('p',`${states[source.state]} · 保存 ${source.completed_count}件`),node('p',`ツールセット: ${source.toolset_id}`),node('p',`参照Batch: ${source.references}件（停止操作はすべての参照先へ影響します）`));const pre=node('pre',JSON.stringify(source.profile,null,2));content.append(pre,button('保存先を開く',()=>api('outputs/open',{output_root_id:source.output_root_id}),'secondary'));for(const artifact of source.artifacts)content.append(node('p',(artifact.valid?'✓ ':'欠損・変更あり: ')+artifact.relative_path));clearTimeout(detailTimer);detailSource=id;detailOffset=0;$('detail-log').textContent='ログを読み込んでいます…';$<HTMLDialogElement>('detail-dialog').showModal();void followLog(id);}
+async function detail(id:string){const source=await api<Source&{profile:unknown;skip_reasons:{reason:string;count:number}[];artifacts:{relative_path:string;valid:boolean}[];references:number}>('sources/'+id);const content=$('detail-content');content.replaceChildren(node('p',`${states[source.state]} · 保存 ${source.completed_count}件`),node('p',`ツールセット: ${source.toolset_id}`),node('p',`参照Batch: ${source.references}件（停止操作はすべての参照先へ影響します）`));
+  const labels:Record<string,string>={DATE_UNKNOWN:'投稿日時不明',DATE_OUTSIDE_RANGE:'指定期間外',MEDIA_POLICY_IMAGES_ONLY:'画像以外'};
+  for(const {reason,count} of source.skip_reasons)content.append(node('p',`${labels[reason]||reason}でスキップ: ${count}件`));
+  const pre=node('pre',JSON.stringify(source.profile,null,2));content.append(pre,button('保存先を開く',()=>api('outputs/open',{output_root_id:source.output_root_id}),'secondary'));for(const artifact of source.artifacts)content.append(node('p',(artifact.valid?'✓ ':'欠損・変更あり: ')+artifact.relative_path));clearTimeout(detailTimer);detailSource=id;detailOffset=0;$('detail-log').textContent='ログを読み込んでいます…';$<HTMLDialogElement>('detail-dialog').showModal();void followLog(id);}
 async function loadCredentials(){const credentials=await api<Credential[]>('credentials');const options=[new Option('使用しない',''),...credentials.map(c=>new Option(c.name,c.id))];select('credential').replaceChildren(...options);const target=$('credential-list');target.replaceChildren(...credentials.map(c=>{const row=node('div',undefined,'credential-row');row.append(node('div',`${c.name} · v${c.version}`),node('small',c.domains.join(', ')),button('名前を変更',async()=>{const name=prompt('新しい表示名',c.name);if(name){await api('credentials/'+c.id,{name},'PATCH');await loadCredentials();}}),button('削除',async()=>{await api('credentials/'+c.id,undefined,'DELETE');await loadCredentials();}));return row;}));if(!credentials.length)empty(target,'Cookieは未登録です','認証が必要なサイトを利用する場合に取り込んでください。');}
 async function loadSettings(){
   const [s,roots,diagnostics]=await Promise.all([api<Settings>('settings'),api<Root[]>('output-roots'),api<{tools:Tool[]}>('diagnostics')]);settings=s;
@@ -152,8 +155,27 @@ async function initialize(){
 }
 function historyApiReplace(){window.history.replaceState(null,'',location.pathname+location.search);}
 for(const nav of document.querySelectorAll<HTMLButtonElement>('[data-tab]'))nav.onclick=()=>run(nav,()=>tab(nav.dataset.tab!));
-for(const radio of document.querySelectorAll<HTMLInputElement>('[name="kind"]'))radio.onchange=()=>{$('video-options').hidden=radio.value!=='video';$('gallery-options').hidden=radio.value!=='gallery';};
-$<HTMLFormElement>('download-form').onsubmit=event=>{event.preventDefault();void run($<HTMLButtonElement>('submit-download'),async()=>{const kind=document.querySelector<HTMLInputElement>('[name="kind"]:checked')!.value;const urls=$<HTMLTextAreaElement>('urls').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);if(!urls.length||urls.length>100)throw new Error('URLは1〜100件で入力してください。');const profile=await api('profiles',{name:'カスタム',kind,container:kind==='video'?select('container').value:'original',height:Number(select('height').value),playlist:input('playlist').checked,media_policy:select('media-policy').value});const result=await api('batches',{kind,urls,profile_id:profile.id,credential_id:select('credential').value||null,output_root_id:select('output-root').value},'POST',crypto.randomUUID());const shared=result.sources.filter((s:{shared:boolean})=>s.shared).length;notice(`キューに追加しました。${shared?` ${shared}件は既存Sourceへの参照です。`:''}`);$<HTMLTextAreaElement>('urls').value='';await refresh();});};
+function updateDateControls(){
+  const urls=$<HTMLTextAreaElement>('urls').value.trim().split(/\s+/);
+  const supported=urls.every(value=>{try{const url=new URL(value);return ['pixiv.net','www.pixiv.net'].includes(url.hostname)&&/^\/(?:en\/)?(?:artworks\/\d+|users\/\d+\/artworks)\/?$/.test(url.pathname);}catch{return false;}});
+  $<HTMLFieldSetElement>('gallery-dates').disabled=!supported && !input('date-from').value && !input('date-to').value;
+  return supported;
+}
+$('urls').addEventListener('input',updateDateControls);
+for(const radio of document.querySelectorAll<HTMLInputElement>('[name="kind"]'))radio.onchange=()=>{$('video-options').hidden=radio.value!=='video';$('gallery-options').hidden=radio.value!=='gallery';updateDateControls();};
+$<HTMLFormElement>('download-form').onsubmit=event=>{event.preventDefault();void run($<HTMLButtonElement>('submit-download'),async()=>{
+  const kind=document.querySelector<HTMLInputElement>('[name="kind"]:checked')!.value;
+  const urls=$<HTMLTextAreaElement>('urls').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(!urls.length||urls.length>100)throw new Error('URLは1〜100件で入力してください。');
+  const dates:Record<string,string|null>={};
+  if(kind==='gallery'&&(input('date-from').value||input('date-to').value)){
+    if(!updateDateControls())throw new Error('期間指定はPixivの作品・作品一覧のみ対応しています。期間を解除するか、対応URLだけを入力してください。');
+    dates.date_from=input('date-from').value||null;dates.date_to=input('date-to').value||null;
+    if(dates.date_from&&dates.date_to&&dates.date_from>dates.date_to)throw new Error('終了日は開始日以降を指定してください。');
+    dates.timezone=input('date-zone').value.trim();
+  }
+  const profile=await api('profiles',{name:'カスタム',kind,container:kind==='video'?select('container').value:'original',height:Number(select('height').value),playlist:input('playlist').checked,media_policy:select('media-policy').value,...dates});
+  const result=await api('batches',{kind,urls,profile_id:profile.id,credential_id:select('credential').value||null,output_root_id:select('output-root').value},'POST',crypto.randomUUID());const shared=result.sources.filter((s:{shared:boolean})=>s.shared).length;notice(`キューに追加しました。${shared?` ${shared}件は既存Sourceへの参照です。`:''}`);$<HTMLTextAreaElement>('urls').value='';updateDateControls();await refresh();});};
 $<HTMLFormElement>('cookie-form').onsubmit=event=>{event.preventDefault();void run((event.submitter as HTMLButtonElement),async()=>{const file=input('cookie-file').files?.[0];if(!file||file.size>262144)throw new Error('256 KiB以下のCookieファイルを選択してください。');await api('credentials',{name:input('cookie-name').value,content:await file.text()});input('cookie-file').value='';input('cookie-name').value='';notice('Cookieを新しい版として取り込みました。');await loadCredentials();});};
 $<HTMLFormElement>('settings-form').onsubmit=event=>{event.preventDefault();void run(event.submitter as HTMLButtonElement,async()=>{settings=await api('settings',{...settings,total_slots:Number(input('total-slots').value),video_slots:Number(input('video-slots').value),gallery_slots:Number(input('gallery-slots').value),time_budget:Number(input('time-budget').value)*3600},'PATCH');notice('実行予算を保存しました。');});};
 $<HTMLFormElement>('root-form').onsubmit=event=>{event.preventDefault();void run(event.submitter as HTMLButtonElement,async()=>{await api('output-roots',{path:input('root-path').value});input('root-path').value='';await loadSettings();notice('保存先を検証して登録しました。');});};

@@ -292,6 +292,10 @@ def create_app(root: Path | None = None, bootstrap_token: str | None = None, sta
         return {
             **public_source(source),
             "artifacts": await store.artifacts(identity),
+            "skip_reasons": await store.read(
+                "SELECT reason,count(*) AS count FROM policy_skips WHERE source_id=? GROUP BY reason",
+                (identity,),
+            ),
             "profile": json.loads(source["profile"]),
             "references": (
                 await store.read(
@@ -378,8 +382,6 @@ def create_app(root: Path | None = None, bootstrap_token: str | None = None, sta
 
     @app.post("/api/v1/profiles", status_code=201)
     async def add_profile(body: Profile):
-        if body.date_from or body.date_to:
-            raise ValueError("DATE_CONTRACT_UNVERIFIED")
         return await store.add_profile(body.model_dump(mode="json"))
 
     @app.get("/api/v1/settings")

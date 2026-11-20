@@ -29,7 +29,11 @@
         <textarea id="urls" rows="3" required placeholder="https://…" spellcheck="false"></textarea>
         <details class="download-options"><summary id="options-toggle">保存オプション</summary>
         <div class="form-grid" id="video-options"><label>保存形式<select id="container"><option value="original">元の形式（最高効率）</option><option value="mp4">MP4（H.264 / AAC・必要時変換）</option><option value="mkv">MKV</option><option value="audio">音声のみ（元の形式）</option><option value="mp3">MP3（変換あり）</option></select></label><label>解像度の上限<select id="height"><option value="720">720p</option><option value="1080" selected>1080p</option><option value="1440">1440p</option><option value="2160">2160p / 4K</option><option value="4320">4320p / 8K</option></select></label><label class="checkbox"><input id="playlist" type="checkbox">プレイリストを取得</label></div>
-        <div id="gallery-options" hidden><label>取得対象<select id="media-policy"><option value="images">画像のみ</option><option value="all">画像・サイト内動画（元の形式）</option></select></label><p class="help">期間指定はサイト別の日時契約検証後に有効化されます。</p></div>
+        <div id="gallery-options" hidden><label>取得対象<select id="media-policy"><option value="images">画像のみ</option><option value="all">画像・サイト内動画（元の形式）</option></select></label>
+          <fieldset id="gallery-dates" disabled><legend>投稿日の範囲（任意）</legend><div class="form-grid">
+            <label>開始日<input id="date-from" type="date"></label><label>終了日（当日を含む）<input id="date-to" type="date"></label>
+            <label>タイムゾーン<input id="date-zone" value="Asia/Tokyo" spellcheck="false"></label>
+          </div></fieldset><p class="help">Pixivの作品URL（/artworks/作品ID）と作品一覧（/users/投稿者ID/artworks）で指定できます。</p></div>
         <div class="form-grid"><label>認証Cookie<select id="credential"><option value="">使用しない</option></select></label><label>保存先<select id="output-root"><option value="default">標準 · downloads</option></select></label></div>
         </details>
         <div class="form-footer"><button type="submit" class="primary" id="submit-download">＋ キューに追加</button></div>
