@@ -116,9 +116,10 @@ def run(command, cwd, env, timeout):
     )
     try:
         output, _ = process.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
         stop(process)
-        raise
+        tail = (exc.output or b"")[-4096:].decode("utf-8", "replace")
+        raise RuntimeError(f"コマンドが{timeout}秒で時間切れ: {command[0]}\n{tail}") from exc
     if process.returncode != 0:
         text = output.decode("utf-8", "replace")
         raise RuntimeError(f"コマンド失敗({process.returncode}): {' '.join(command)}\n{text}")

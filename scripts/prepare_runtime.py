@@ -58,7 +58,7 @@ def expected_digest(url, algorithm, live):
     return value
 
 
-def verified_zip(url, checksum, destination, algorithm="sha256", member=None):
+def verified_zip(url, checksum, destination, algorithm="sha256", member=None, download_url=None):
     cache = ROOT / ".cache/distributions" / (hashlib.sha256(url.encode()).hexdigest() + ".zip")
     cache.parent.mkdir(parents=True, exist_ok=True)
     if cache.exists():
@@ -66,8 +66,8 @@ def verified_zip(url, checksum, destination, algorithm="sha256", member=None):
     else:
         if OFFLINE:
             raise RuntimeError("オフラインでは配布物を取得できません: " + url)
-        print("取得: " + url, flush=True)
-        body = fetch(url)
+        print("取得: " + (download_url or url), flush=True)
+        body = fetch(download_url or url)
     if hashlib.new(algorithm, body).hexdigest() != checksum.lower():
         raise RuntimeError("配布物のハッシュが一致しません: " + url)
     cache.write_bytes(body)
@@ -128,13 +128,16 @@ def main():
         return fetch(ffmpeg_url + ".sha256").decode().split()[0]
 
     ffmpeg_sum = expected_digest(ffmpeg_url, "sha256", ffmpeg_checksum)
-    records.append(
-        verified_zip(ffmpeg_url, ffmpeg_sum, ROOT / "runtime/media", member="ffmpeg.exe")
+    # URL由来の既存キャッシュキーを維持し、新規取得だけ配布者のGitHub Releaseを使う。
+    release = (
+        "https://github.com/GyanD/codexffmpeg/releases/download/9.1/ffmpeg-9.1-essentials_build.zip"
     )
-    # 同一アーカイブからffprobeも展開する。
-    records.append(
-        verified_zip(ffmpeg_url, ffmpeg_sum, ROOT / "runtime/media", member="ffprobe.exe")
-    )
+    for binary in ("ffmpeg.exe", "ffprobe.exe"):
+        records.append(
+            verified_zip(
+                ffmpeg_url, ffmpeg_sum, ROOT / "runtime/media", member=binary, download_url=release
+            )
+        )
     record_path = ROOT / "runtime/distributions.json"
     old = json.loads(record_path.read_text()) if record_path.exists() else []
     merged = []
