@@ -45,7 +45,7 @@ def main():
     cache.mkdir(parents=True, exist_ok=True)
     run = Path(tempfile.mkdtemp(prefix="run-", dir=cache))
     python = ROOT / ".venv/Scripts/python.exe"
-    node = ROOT / "runtime/build-tools/node-v24.14.1-win-x64/node.exe"
+    node = ROOT / "runtime/build-tools/node-v24.22.3-win-x64/node.exe"
     env = {
         **os.environ,
         "PYTHONUTF8": "1",

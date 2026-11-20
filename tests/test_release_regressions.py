@@ -152,11 +152,11 @@ def test_runtime_checksum_is_pinned_without_network():
 
     assert (
         script["expected_digest"](
-            "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
+            "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.1-essentials_build.zip",
             "sha256",
             unexpected_network,
         )
-        == "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba"
+        == "b9bbbb3acece000cbeec994f856649354e52c773807841e78908374b24d658fd"
     )
 
 

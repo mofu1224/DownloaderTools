@@ -18,7 +18,7 @@ def main():
     ffmpeg = media / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
     ffprobe = media / ("ffprobe.exe" if os.name == "nt" else "ffprobe")
     node = (
-        next((ROOT / "runtime/build-tools").glob("node-*/node.exe"))
+        ROOT / "runtime/build-tools/node-v24.22.3-win-x64/node.exe"
         if os.name == "nt"
         else ROOT / "runtime/build-tools/node/bin/node"
     )
@@ -138,7 +138,12 @@ def main():
     binary_dir = destination / "bin"
     binary_dir.mkdir(exist_ok=True)
     for original in (ffmpeg, ffprobe, node):
-        shutil.copyfile(original, binary_dir / original.name)
+        shutil.copy2(original, binary_dir / original.name)
+    if os.name != "nt" and python.is_symlink():
+        # venvの場所を保持し、manifestの実行入口を通常ファイルとして検証可能にする。
+        copied = python.with_suffix(".tmp")
+        shutil.copy2(python, copied)
+        os.replace(copied, python)
     files = {
         "python": python,
         "ffmpeg": binary_dir / ffmpeg.name,

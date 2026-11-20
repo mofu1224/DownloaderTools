@@ -459,7 +459,11 @@ class Scheduler:
                     raise ValueError("CREDENTIAL_MISSING")
                 session = self.root / "data/sessions" / source["attempt_id"]
                 private_directory(session)
-                cookie = session / "cookies.txt"
+                cookie = session / (
+                    "auth.pixiv-token"
+                    if rows[0]["path"].endswith(".pixiv-token")
+                    else "cookies.txt"
+                )
                 await asyncio.to_thread(shutil.copyfile, self.root / rows[0]["path"], cookie)
             command = build_command(source, source["manifest"], work, cookie)
             config = {

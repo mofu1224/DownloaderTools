@@ -12,6 +12,7 @@ dependencies = [
   "fastapi", "uvicorn", "jinja2", "httpx", "portalocker", "psutil",
   "pillow", "pydantic", "tzdata",
   "pywin32; sys_platform == 'win32'",
+  "pysqlite3==0.6.2; sys_platform == 'darwin'",
 ]
 
 [dependency-groups]

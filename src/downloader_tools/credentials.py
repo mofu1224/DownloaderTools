@@ -63,14 +63,28 @@ class Credentials:
         self.store, self.root = store, root
 
     async def create(self, name: str, content: str):
+        suffix = ".txt"
         try:
-            text, domains = normalize_cookie(content)
+            data = json.loads(content) if content.lstrip().startswith("{") else None
+            if isinstance(data, dict) and data.get("type") == "pixiv-oauth":
+                text = data["refresh_token"]
+                if (
+                    not isinstance(text, str)
+                    or not 1 <= len(text) <= 4096
+                    or not text.isascii()
+                    or not text.isprintable()
+                    or any(c.isspace() for c in text)
+                ):
+                    raise ValueError("CREDENTIAL_INVALID")
+                domains, suffix = ["www.pixiv.net"], ".pixiv-token"
+            else:
+                text, domains = normalize_cookie(content)
         except KeyError, TypeError, OverflowError, AttributeError, ValueError:
             raise ValueError("COOKIE_INVALID") from None
         folder = self.root / "data/credentials"
         private_directory(folder)
         identity = uid()
-        path = folder / (identity + ".txt")
+        path = folder / (identity + suffix)
         with path.open("x", encoding="utf-8", newline="\n") as stream:
             stream.write(text)
         try:

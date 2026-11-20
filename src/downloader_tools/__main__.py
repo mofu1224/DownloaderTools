@@ -67,10 +67,10 @@ def main():
 
 def restore(root: Path, backup: Path):
     import os
-    import sqlite3
     import tempfile
     from contextlib import closing
 
+    from .database_driver import sqlite3
     from .domain import Profile, Settings
     from .store import uid
 

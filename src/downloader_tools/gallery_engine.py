@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 
 import gallery_dl
-from gallery_dl import job
+from gallery_dl import config, job
 from gallery_dl.downloader.ytdl import YoutubeDLDownloader
 
 # -Iで隔離したtoolsetから、このアダプターと標準ライブラリ製の共通処理だけを読む。
@@ -70,6 +70,8 @@ class StructuredDownloadJob(job.DownloadJob):
         super().__init__(url, parent)
         self.out = StructuredOutput()
         extractor = self.extractor
+        if extractor.category == "pixiv" and (token_file := extractor.config("dt-token-file")):
+            config.set(("extractor", "pixiv"), "refresh-token", Path(token_file).read_text("utf-8"))
         if (
             extractor.config("dt-date-bounds") is not None
             and extractor.category == "pixiv"

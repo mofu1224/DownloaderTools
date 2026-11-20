@@ -138,7 +138,7 @@ async function X(t) {
   for (const c of o.artifacts) n.append(s("p", (c.valid ? "✓ " : "欠損・変更あり: ") + c.relative_path));
   clearTimeout(x), _ = t, T = 0, a("detail-log").textContent = "ログを読み込んでいます…", a("detail-dialog").showModal(), z(t);
 }
-async function k() {
+async function I() {
   const t = await r("credentials"), o = [new Option("使用しない", ""), ...t.map((e) => new Option(e.name, e.id))];
   p("credential").replaceChildren(...o);
   const n = a("credential-list");
@@ -146,13 +146,13 @@ async function k() {
     const i = s("div", void 0, "credential-row");
     return i.append(s("div", `${e.name} · v${e.version}`), s("small", e.domains.join(", ")), h("名前を変更", async () => {
       const c = prompt("新しい表示名", e.name);
-      c && (await r("credentials/" + e.id, { name: c }, "PATCH"), await k());
+      c && (await r("credentials/" + e.id, { name: c }, "PATCH"), await I());
     }), h("削除", async () => {
-      await r("credentials/" + e.id, void 0, "DELETE"), await k();
+      await r("credentials/" + e.id, void 0, "DELETE"), await I();
     })), i;
   })), t.length || R(n, "Cookieは未登録です", "認証が必要なサイトを利用する場合に取り込んでください。");
 }
-async function I() {
+async function k() {
   const [t, o, n] = await Promise.all([r("settings"), r("output-roots"), r("diagnostics")]);
   A = t, l("total-slots").value = String(t.total_slots), l("video-slots").value = String(t.video_slots), l("gallery-slots").value = String(t.gallery_slots), l("time-budget").value = String(t.time_budget / 3600), p("output-root").replaceChildren(...o.map((e) => new Option((e.id === "default" ? "標準 · " : "") + e.path, e.id))), a("roots-list").replaceChildren(...o.map((e) => {
     const i = s("div", void 0, "credential-row");
@@ -165,7 +165,7 @@ async function Q(t) {
   for (const o of Object.keys(q)) a("panel-" + o).hidden = o !== t;
   for (const o of document.querySelectorAll("[data-tab]"))
     o.dataset.tab === t ? o.setAttribute("aria-current", "page") : o.removeAttribute("aria-current");
-  [a("page-title").textContent, a("page-description").textContent] = q[t], t === "history" && await O(), t === "credentials" && await k(), t === "settings" && await I();
+  [a("page-title").textContent, a("page-description").textContent] = q[t], t === "history" && await O(), t === "credentials" && await I(), t === "settings" && await k();
 }
 async function Y() {
   const t = location.hash.startsWith("#token=") ? decodeURIComponent(location.hash.slice(7)) : null;
@@ -177,7 +177,7 @@ async function Y() {
     if (!t) throw e;
     o = await r("session", { token: t });
   }
-  B = o.csrf, await Promise.all([w(), k(), I()]);
+  B = o.csrf, await Promise.all([w(), I(), k()]);
   const n = new EventSource("/api/v1/events");
   n.addEventListener("snapshot", (e) => {
     J(JSON.parse(e.data)), a("connection").textContent = "接続済み", clearTimeout(C), C = void 0, S = 2e3;
@@ -232,8 +232,8 @@ a("download-form").onsubmit = (t) => {
 a("cookie-form").onsubmit = (t) => {
   t.preventDefault(), g(t.submitter, async () => {
     const o = l("cookie-file").files?.[0];
-    if (!o || o.size > 262144) throw new Error("256 KiB以下のCookieファイルを選択してください。");
-    await r("credentials", { name: l("cookie-name").value, content: await o.text() }), l("cookie-file").value = "", l("cookie-name").value = "", d("Cookieを新しい版として取り込みました。"), await k();
+    if (!o || o.size > 262144) throw new Error("256 KiB以下の認証ファイルを選択してください。");
+    await r("credentials", { name: l("cookie-name").value, content: await o.text() }), l("cookie-file").value = "", l("cookie-name").value = "", d("認証情報を新しい版として取り込みました。"), await I();
   });
 };
 a("settings-form").onsubmit = (t) => {
@@ -243,7 +243,7 @@ a("settings-form").onsubmit = (t) => {
 };
 a("root-form").onsubmit = (t) => {
   t.preventDefault(), g(t.submitter, async () => {
-    await r("output-roots", { path: l("root-path").value }), l("root-path").value = "", await I(), d("保存先を検証して登録しました。");
+    await r("output-roots", { path: l("root-path").value }), l("root-path").value = "", await k(), d("保存先を検証して登録しました。");
   });
 };
 a("refresh").onclick = () => {
@@ -263,7 +263,7 @@ a("backup").onclick = () => g(a("backup"), async () => {
   await r("backups", {}), d("data/backupsにバックアップを保存しました。");
 });
 a("activate-toolset").onclick = () => g(a("activate-toolset"), async () => {
-  await r("toolset-updates", { toolset_id: p("toolset-choice").value }), await I(), d("新規受付用のツールセットを切り替えました。");
+  await r("toolset-updates", { toolset_id: p("toolset-choice").value }), await k(), d("新規受付用のツールセットを切り替えました。");
 });
 a("update-toolset").onclick = () => g(a("update-toolset"), async () => {
   const t = await r("toolset-updates", {});
@@ -271,7 +271,7 @@ a("update-toolset").onclick = () => g(a("update-toolset"), async () => {
     const e = window.setInterval(async () => {
       try {
         const i = await r("toolset-updates/" + t.id);
-        i.state === "completed" ? (a("update-status").textContent = "検証完了: " + i.toolset_id, clearInterval(e), await I(), o()) : i.state === "failed" && (clearInterval(e), n(new Error("ツールセット更新に失敗しました。旧版を引き続き使用します。")));
+        i.state === "completed" ? (a("update-status").textContent = "検証完了: " + i.toolset_id, clearInterval(e), await k(), o()) : i.state === "failed" && (clearInterval(e), n(new Error("ツールセット更新に失敗しました。旧版を引き続き使用します。")));
       } catch (i) {
         clearInterval(e), n(i);
       }

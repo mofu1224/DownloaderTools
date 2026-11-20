@@ -100,18 +100,18 @@ def main():
     if "--media-only" not in sys.argv:
         records.append(
             verified_zip(
-                "https://sqlite.org/2026/sqlite-dll-win-x64-3540000.zip",
-                "f5fb500c73a3afd89976386bb8e4fdc8b5b65c052e187fb1ada1f5de034cd45b",
+                "https://sqlite.org/2026/sqlite-dll-win-x64-3540100.zip",
+                "c2d09c8babb9399277055c057c97a53f1ffd7c5f11d0c1f2118ffdfa39f2daa4",
                 python_root / "DLLs",
                 "sha3_256",
                 "sqlite3.dll",
             )
         )
-    node_name = "node-v24.14.1-win-x64.zip"
-    node_url = "https://nodejs.org/dist/v24.14.1/" + node_name
+    node_name = "node-v24.22.3-win-x64.zip"
+    node_url = "https://nodejs.org/dist/v24.22.3/" + node_name
 
     def node_checksum():
-        sums = fetch("https://nodejs.org/dist/v24.14.1/SHASUMS256.txt").decode()
+        sums = fetch("https://nodejs.org/dist/v24.22.3/SHASUMS256.txt").decode()
         return next(line.split()[0] for line in sums.splitlines() if line.endswith(node_name))
 
     if "--media-only" not in sys.argv:
@@ -122,7 +122,7 @@ def main():
                 ROOT / "runtime/build-tools",
             )
         )
-    ffmpeg_url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+    ffmpeg_url = "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.1-essentials_build.zip"
 
     def ffmpeg_checksum():
         return fetch(ffmpeg_url + ".sha256").decode().split()[0]

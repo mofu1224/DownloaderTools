@@ -1,10 +1,10 @@
 import asyncio
 import hashlib
 import json
-import sqlite3
 import sys
 from pathlib import Path
 
+from .database_driver import sqlite3
 from .paths import contained
 from .store import Store
 
@@ -138,6 +138,13 @@ class Toolsets:
                     )
                 )
                 self.status[path.parent.name] = {"state": "failed", "reason": type(exc).__name__}
+        # DBだけを移した場合も、ディスクに存在しない旧版を新規受付に使わない。
+        await self.store.write(
+            lambda c: c.execute(
+                "UPDATE toolsets SET active=0 WHERE active=1 AND id NOT IN "
+                "(SELECT id FROM toolset_validation WHERE verified=1)"
+            )
+        )
         if not await self.store.read("SELECT id FROM toolsets WHERE active=1"):
             rows = await self.store.read(
                 "SELECT t.id FROM toolsets t JOIN toolset_validation v ON v.id=t.id "

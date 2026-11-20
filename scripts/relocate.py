@@ -4,7 +4,6 @@ import hashlib
 import json
 import os
 import shutil
-import sqlite3
 import subprocess
 import sys
 import time
@@ -17,6 +16,11 @@ UV_OFFLINE = ["--offline"] if OFFLINE else []
 
 
 def main():
+    if sys.platform == "darwin":
+        from downloader_tools.database_driver import sqlite3
+    else:
+        import sqlite3
+
     base_python = Path(sys.base_prefix) / ("python.exe" if os.name == "nt" else "bin/python3")
     with base_python.open("rb") as stream:
         base_hash = hashlib.file_digest(stream, "sha256").hexdigest()
@@ -38,6 +42,10 @@ def main():
             [str(uv), "venv", "--python", str(base), str(environment)], check=True, timeout=60
         )
         python = ROOT / manifest["python"]
+        if os.name != "nt" and python.is_symlink():
+            copied = python.with_suffix(".tmp")
+            shutil.copy2(python, copied)
+            os.replace(copied, python)
         subprocess.run(
             [
                 str(uv),

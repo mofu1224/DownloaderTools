@@ -14,7 +14,7 @@ from PIL import Image
 def media_server(tmp_path):
     from downloader_tools.paths import root_path
 
-    ffmpeg = root_path() / "runtime/media/ffmpeg.exe"
+    ffmpeg = root_path() / "runtime/media" / ("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
     if not ffmpeg.exists():
         pytest.fail("契約検証にはセットアップ済みFFmpegが必要です")
     Image.new("RGB", (32, 32), "blue").save(tmp_path / "sample.png")
@@ -133,7 +133,11 @@ def test_pixiv_date_contract_saves_only_in_range(media_server, tmp_path, day, po
     manifest = json.loads(
         next((root_path() / "runtime/toolsets").glob("*/manifest.json")).read_text()
     )
-    command = build_command(source, manifest, work, None)
+    credential = tmp_path / "auth.pixiv-token"
+    credential.write_text("fixture-oauth-only")
+    command = build_command(source, manifest, work, credential)
+    assert "fixture-oauth-only" not in json.dumps(command)
+    assert "fixture-oauth-only" not in (work / "gallery-config.json").read_text()
     works = []
     for i, stamp in enumerate(posted, 1):
         # 除外予定のURLは存在しない。誤って転送すると実エンジンが失敗する。
@@ -158,7 +162,8 @@ def test_pixiv_date_contract_saves_only_in_range(media_server, tmp_path, day, po
     entry = command[i]
     code = (
         "import runpy,sys,json; from gallery_dl.extractor.pixiv import PixivArtworksExtractor; "
-        f"PixivArtworksExtractor.works=lambda self: json.loads({json.dumps(works)!r}); "
+        f"PixivArtworksExtractor.works=lambda self: json.loads({json.dumps(works)!r}) "
+        "if self.api.refresh_token=='fixture-oauth-only' else []; "
         f"sys.argv[0]={entry!r}; runpy.run_path(sys.argv[0],run_name='__main__')"
     )
     run = subprocess.run(
@@ -374,21 +379,9 @@ def test_single_webm_is_remuxed_and_embedded(media_server, tmp_path, container):
     manifest = json.loads(
         next((root_path() / "runtime/toolsets").glob("*/manifest.json")).read_text()
     )
-    subprocess.run(
-        [
-            str(root_path() / manifest["ffmpeg"]),
-            "-v",
-            "error",
-            "-i",
-            str(tmp_path / "sample.mp4"),
-            "-c:v",
-            "libvpx-vp9",
-            "-c:a",
-            "libopus",
-            str(tmp_path / "sample.webm"),
-        ],
-        timeout=30,
-        check=True,
+    # 青一色＋無音のVP9/Opus。テスト入力の生成用エンコーダは製品に要求しない。
+    (tmp_path / "sample.webm").write_bytes(
+        (root_path() / "tests/fixtures/synthetic-vp9-opus.webm").read_bytes()
     )
     (tmp_path / "webm.html").write_text(
         (tmp_path / "page.html")
@@ -655,7 +648,7 @@ async def test_images_only_skips_nonimage_identified_after_download(
 def video_with_embedded_cover(folder: Path) -> Path:
     from downloader_tools.paths import root_path
 
-    ffmpeg = root_path() / "runtime/media/ffmpeg.exe"
+    ffmpeg = root_path() / "runtime/media" / ("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
     if not ffmpeg.exists():
         pytest.fail("契約検証にはセットアップ済みFFmpegが必要です")
     subprocess.run(

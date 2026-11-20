@@ -1,5 +1,7 @@
 import re
+import sys
 from datetime import datetime
+from functools import cache
 from pathlib import Path
 
 import portalocker
@@ -33,6 +35,32 @@ def append_log(path: Path, component: str, message: str) -> bool:
         return False
 
 
+@cache
+def mac_disk_io():
+    """psutilがmacOSで提供しないI/O量をlibprocのRUSAGE_INFO_V2から読む。"""
+    import ctypes
+
+    class Usage(ctypes.Structure):
+        _fields_ = [
+            ("uuid", ctypes.c_uint8 * 16),
+            ("usage_and_child_times", ctypes.c_uint64 * 16),
+            ("read_bytes", ctypes.c_uint64),
+            ("write_bytes", ctypes.c_uint64),
+        ]
+
+    read_usage = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True).proc_pid_rusage
+    read_usage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.POINTER(Usage)]
+    read_usage.restype = ctypes.c_int
+
+    def counts(pid):
+        usage = Usage()
+        if read_usage(pid, 2, ctypes.byref(usage)) != 0:
+            raise OSError(ctypes.get_errno(), "proc_pid_rusage")
+        return usage.read_bytes, usage.write_bytes
+
+    return counts
+
+
 def process_activity(pid: int) -> dict | None:
     try:
         parent = psutil.Process(pid)
@@ -43,15 +71,15 @@ def process_activity(pid: int) -> dict | None:
     for process in processes:
         try:
             cpu = process.cpu_times()
-            io = process.io_counters()
-            activity[(process.pid, process.create_time())] = (
-                cpu.user + cpu.system,
-                io.read_bytes,
-                io.write_bytes,
-            )
+            if sys.platform == "darwin":
+                reads, writes = mac_disk_io()(process.pid)
+            else:
+                io = process.io_counters()
+                reads, writes = io.read_bytes, io.write_bytes
+            activity[(process.pid, process.create_time())] = (cpu.user + cpu.system, reads, writes)
         except psutil.NoSuchProcess:
             continue
-        except psutil.Error, AttributeError:
+        except psutil.Error, AttributeError, OSError:
             # 監視権限がない場合、正常な無出力処理を停止しない。
             return None
     return activity

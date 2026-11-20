@@ -8,16 +8,18 @@
 
 | 構成要素 | 同梱先 | ライセンス（配布元表示に基づく） | 配布元 |
 | --- | --- | --- | --- |
-| Python 3.14.5 | `runtime/python/` | PSF License Agreement | https://www.python.org/ |
-| uv 0.11.17 | `runtime/uv.exe` | Apache-2.0 または MIT | https://github.com/astral-sh/uv |
-| Node.js v24.14.1 | `runtime/build-tools/`, 各toolset `bin/node.exe` | MIT | https://nodejs.org/ |
-| FFmpeg / FFprobe 9.0.2 | `runtime/media/`, 各toolset `bin/` | GPL（gyan.devのessentialsビルド） | https://www.gyan.dev/ffmpeg/builds/ |
-| SQLite 3.54.0（sqlite3.dll） | `runtime/python/.../DLLs/` | Public Domain | https://sqlite.org/ |
+| Python 3.14.10 | `runtime/python/` | PSF License Agreement | https://www.python.org/ |
+| uv 0.13.9 | `runtime/` | Apache-2.0 または MIT | https://github.com/astral-sh/uv |
+| Node.js v24.22.3 | `runtime/build-tools/`, 各toolset `bin/` | MIT | https://nodejs.org/ |
+| FFmpeg / FFprobe 9.1 | `runtime/media/`, 各toolset `bin/` | GPL（Windows: gyan.devのessentialsビルド、Mac: libx264有効） | https://ffmpeg.org/ |
+| SQLite 3.54.1（アプリのDB） | Windows: `runtime/python/.../DLLs/`、Mac: `.venv/` のpysqlite3 0.6.2 | SQLiteはPublic Domain | https://sqlite.org/ |
 | yt-dlp 2026.08.19 | `runtime/toolsets/*/python/` | Unlicense | https://github.com/yt-dlp/yt-dlp |
 | gallery-dl 1.32.16 | `runtime/toolsets/*/python/` | GPL-2.0 | https://github.com/mikf/gallery-dl |
 
 FFmpegとgallery-dlはGPLが適用されます。GPLの配布物を再配布する場合は、対応するソースの提供などの
 GPL条件を満たす必要があります。各同梱物に付属するライセンス本文（`LICENSE`等）を必ず確認してください。
+
+Macではビルド時にpkgconf 2.5.1を使い、FFmpegにx264（GPL）とLAME 3.100（LGPL）を静的リンクします。使用したソースと検証値は `scripts/bootstrap-macos.sh` で確認できます。
 
 ## 取得する固定版の依存（`uv.lock` / 各toolsetの `requirements.txt`）
 

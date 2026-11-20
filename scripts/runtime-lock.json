@@ -1,17 +1,17 @@
 [
   {
-    "url": "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
+    "url": "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.1-essentials_build.zip",
     "algorithm": "sha256",
-    "digest": "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba"
+    "digest": "b9bbbb3acece000cbeec994f856649354e52c773807841e78908374b24d658fd"
   },
   {
-    "url": "https://sqlite.org/2026/sqlite-dll-win-x64-3540000.zip",
+    "url": "https://sqlite.org/2026/sqlite-dll-win-x64-3540100.zip",
     "algorithm": "sha3_256",
-    "digest": "f5fb500c73a3afd89976386bb8e4fdc8b5b65c052e187fb1ada1f5de034cd45b"
+    "digest": "c2d09c8babb9399277055c057c97a53f1ffd7c5f11d0c1f2118ffdfa39f2daa4"
   },
   {
-    "url": "https://nodejs.org/dist/v24.14.1/node-v24.14.1-win-x64.zip",
+    "url": "https://nodejs.org/dist/v24.22.3/node-v24.22.3-win-x64.zip",
     "algorithm": "sha256",
-    "digest": "6e50ce5498c0cebc20fd39ab3ff5df836ed2f8a31aa093cecad8497cff126d70"
+    "digest": "e612af99f626ab415ea225af6bce5c971feb448cb5cae250bb1c3fa50c5f7d9f"
   }
 ]

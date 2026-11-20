@@ -160,7 +160,8 @@ def main(config_path: str):
         assert process.stdin
         process.stdin.write(b"GO\n")
         process.stdin.flush()
-        process.stdin.close()
+        if sys.platform != "darwin":
+            process.stdin.close()
         notify({"type": "started"}, True)
         log("host", f"engine_started pid={process.pid}")
 
@@ -319,10 +320,15 @@ def main(config_path: str):
         )
         notify({"type": "engine_exit", **result}, True)
     finally:
+        if process.stdin and not process.stdin.closed:
+            process.stdin.close()
         if job:
             win32api.CloseHandle(job)
         elif process.poll() is None:
-            os.kill(-process.pid, signal.Signals(9))
+            try:
+                os.kill(-process.pid, signal.Signals(9))
+            except ProcessLookupError:
+                pass
         messages.put(None, timeout=1)
         sender.join(1)
     return 0

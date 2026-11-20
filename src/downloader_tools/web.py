@@ -3,7 +3,6 @@ import codecs
 import json
 import os
 import secrets
-import sqlite3
 import sys
 import time
 from contextlib import asynccontextmanager
@@ -19,6 +18,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import Field
 
 from .credentials import Credentials
+from .database_driver import sqlite3
 from .domain import BatchRequest, Model, Profile, Settings
 from .events import Events
 from .paths import private_directory, root_path

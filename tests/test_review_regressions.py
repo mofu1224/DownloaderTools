@@ -95,7 +95,8 @@ async def test_recovery_never_succeeds_without_descendant_exit_proof(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_tampered_active_toolset_is_not_left_executable(tmp_path):
+@pytest.mark.parametrize("missing_manifest", [False, True])
+async def test_unavailable_active_toolset_is_not_left_executable(tmp_path, missing_manifest):
     from downloader_tools.store import Store
     from downloader_tools.toolsets import Toolsets
 
@@ -121,7 +122,10 @@ async def test_tampered_active_toolset_is_not_left_executable(tmp_path):
         tools = Toolsets(store, tmp_path)
         await tools.register(manifest)
         await tools.activate("one")
-        binary.write_bytes(b"tampered")
+        if missing_manifest:
+            (folder / "manifest.json").unlink()
+        else:
+            binary.write_bytes(b"tampered")
         await tools.discover()
         assert not await store.read("SELECT id FROM toolsets WHERE active=1")
     finally:

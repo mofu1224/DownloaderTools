@@ -28,12 +28,12 @@ function Run-Native([string]$exe, [string[]]$arguments) {
 $runtime = Join-Path $root 'runtime'
 [IO.Directory]::CreateDirectory($runtime) | Out-Null
 $uv = Join-Path $runtime 'uv.exe'
-if (!(Test-Path -LiteralPath $uv)) {
+if (!(Test-Path -LiteralPath $uv) -or (& $uv --version) -notmatch '^uv 0\.13\.9(\s|$)') {
     if ($offline) { throw 'オフラインではuvを取得できません。ネットワーク接続後に再実行してください。' }
-    $url = 'https://github.com/astral-sh/uv/releases/download/0.11.17/uv-x86_64-pc-windows-msvc.zip'
+    $url = 'https://github.com/astral-sh/uv/releases/download/0.13.9/uv-x86_64-pc-windows-msvc.zip'
     $archive = Join-Path $runtime 'uv.zip'
     Invoke-WebRequest -UseBasicParsing -TimeoutSec 120 -Uri $url -OutFile $archive
-    $expected = '35fc29e03e62f3cda769bc12773f3cb70ce305d0d36c0d8bd0c117dd0b3fcd14'
+    $expected = 'edd61f7f5728a56cc62455386661860bdfc7bab65872f39b0c25bdcc1d8e1beb'
     $hash = [Security.Cryptography.SHA256]::Create()
     $stream = [IO.File]::OpenRead($archive)
     try { $actual = [BitConverter]::ToString($hash.ComputeHash($stream)).Replace('-', '').ToLower() }
@@ -48,12 +48,13 @@ if (!(Test-Path -LiteralPath $uv)) {
     } finally { $zip.Dispose() }
     Remove-Item -LiteralPath $archive
 }
-$python = Join-Path $runtime 'python/cpython-3.14.5-windows-x86_64-none/python.exe'
+$version = [IO.File]::ReadAllText((Join-Path $root '.python-version')).Trim()
+$python = Join-Path $runtime "python/cpython-$version-windows-x86_64-none/python.exe"
 if (Test-Path -LiteralPath $python) {
     # 同梱のPythonを使い、uvによる導入や版リンクの作成を行わない。
     $env:UV_PYTHON = $python
 } else {
-    Run-Native $uv (@('python','install','3.14.5','--no-bin','--no-registry') + $uvOffline)
+    Run-Native $uv (@('python','install',$version,'--no-bin','--no-registry') + $uvOffline)
 }
 Push-Location $root
 try {
@@ -72,7 +73,7 @@ try {
     $static = Join-Path $root 'src/downloader_tools/static/app.js'
     if ($BuildFrontend -or !(Test-Path -LiteralPath $static)) {
         if ($offline) { throw 'オフラインではフロントをビルドできません（静的資産がありません）。' }
-        $node = Join-Path $runtime 'build-tools/node-v24.14.1-win-x64'
+        $node = Join-Path $runtime 'build-tools/node-v24.22.3-win-x64'
         $env:PATH = "$node;$env:PATH"
         Run-Native (Join-Path $node 'npm.cmd') @('ci','--prefix','frontend','--ignore-scripts','--no-audit','--no-fund')
         Run-Native (Join-Path $node 'npm.cmd') @('run','build','--prefix','frontend')

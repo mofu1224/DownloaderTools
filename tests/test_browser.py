@@ -1,4 +1,5 @@
 import socket
+import sys
 import threading
 import time
 
@@ -34,7 +35,9 @@ def test_browser_create_pause_history_settings_and_mobile(tmp_path):
     errors = []
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(channel="msedge", headless=True)
+            browser = playwright.chromium.launch(
+                channel="msedge" if sys.platform == "win32" else None, headless=True
+            )
             page = browser.new_page(viewport={"width": 1440, "height": 1100})
             page.on("pageerror", lambda error: errors.append(str(error)))
             page.goto(f"http://127.0.0.1:{port}/#token=browser-fixture")

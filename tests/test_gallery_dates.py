@@ -57,3 +57,29 @@ async def test_batch_requires_verified_site_and_version_and_counts_unknown_once(
         assert await store.read("SELECT reason FROM policy_skips") == [{"reason": UNKNOWN}]
     finally:
         await store.close()
+
+
+async def test_pixiv_credential_is_private_and_rejected_for_other_sites(tmp_path):
+    from downloader_tools.credentials import Credentials
+
+    store = Store(tmp_path / "data/app.sqlite3")
+    await store.start()
+    try:
+        credentials = Credentials(store, tmp_path)
+        auth = await credentials.create(
+            "test", json.dumps({"type": "pixiv-oauth", "refresh_token": "fixture-oauth-only"})
+        )
+        assert "fixture-oauth-only" not in json.dumps([auth, await credentials.list()])
+        with pytest.raises(ValueError, match="PIXIV_CREDENTIAL_SCOPE"):
+            await store.create_batch(
+                {
+                    "profile_id": "gallery-default",
+                    "kind": "gallery",
+                    "urls": ["https://example.org/artworks/1"],
+                    "credential_id": auth["id"],
+                },
+                "mixed-auth",
+            )
+        assert not await store.read("SELECT id FROM sources")
+    finally:
+        await store.close()

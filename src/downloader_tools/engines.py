@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from .domain import Profile
-from .gallery_dates import bounds
+from .gallery_dates import bounds, supports_url
 from .paths import atomic_json, root_path
 
 
@@ -12,6 +12,9 @@ def absolute(path: str) -> str:
 
 def build_command(source: dict, manifest: dict, work: Path, cookie: Path | None) -> list[str]:
     profile = Profile.model_validate_json(source["profile"])
+    pixiv_token = cookie is not None and cookie.suffix == ".pixiv-token"
+    if pixiv_token and (source["kind"] != "gallery" or not supports_url(source["url"])):
+        raise ValueError("PIXIV_CREDENTIAL_SCOPE")
     python = absolute(manifest["python"])
     payload = work / "payload"
     payload.mkdir(parents=True, exist_ok=True)
@@ -117,6 +120,9 @@ def build_command(source: dict, manifest: dict, work: Path, cookie: Path | None)
         }
         if profile.media_policy == "images":
             configuration["extractor"]["dt-images-only"] = True
+        if pixiv_token and cookie is not None:
+            configuration["extractor"]["pixiv"] = {"dt-token-file": str(cookie)}
+            configuration["cache"]["file"] = str(cookie.parent / "pixiv-cache.sqlite3")
         if profile.date_from or profile.date_to:
             configuration["extractor"]["dt-date-bounds"] = bounds(
                 profile.date_from, profile.date_to, profile.timezone
@@ -139,7 +145,7 @@ def build_command(source: dict, manifest: dict, work: Path, cookie: Path | None)
             "--http-timeout",
             "30",
         ]
-        if cookie:
+        if cookie and not pixiv_token:
             command += ["--cookies", str(cookie)]
     return command + ["--", source["url"]]
 

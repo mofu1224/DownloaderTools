@@ -27,10 +27,12 @@ PUBLISHED_FILES = (
     "uv.lock",
     ".python-version",
     ".gitignore",
+    ".gitattributes",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "Start-DownloaderTools.bat",
+    "tests/fixtures/synthetic-vp9-opus.webm",
 )
 SOURCE_TREES = {
     "src": {".py", ".sql", ".html", ".css", ".js"},

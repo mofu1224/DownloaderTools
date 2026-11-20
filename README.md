@@ -6,7 +6,7 @@ type: 利用ガイド
 
 動画・音声・画像をローカルに保存するWebアプリです。URLをキューに登録すると順番にダウンロードします。中断したキューは再開でき、保存済みのファイルは上書きしません。
 
-現行版は **0.1.0の検証候補** です。Windows x64で検証しています。macOS対応・24時間運転は未検証です。本体は [MITライセンス](LICENSE) です。
+現行版は **0.1.0** です。Windows x64とApple Silicon Macで、起動とローカル試験メディアの保存を確認しています。24時間連続運転と認証付き実サイトでの動作は未検証です。本体は [MITライセンス](LICENSE) です。
 
 ## リポジトリのクローンと起動
 
@@ -18,7 +18,15 @@ cd DownloaderTools
 .\Start-DownloaderTools.bat
 ```
 
-対応環境は **Windows x64** です。`Start-DownloaderTools.bat` を実行すると、必要なローカル環境をこのフォルダ内に自動で準備してからブラウザが開きます。言語ランタイム・依存・FFmpeg等の手動導入は不要です。
+**Apple Silicon Mac** では、Xcode Command Line Toolsのある環境で次を実行します。初回は固定版のソースからFFmpegをビルドします。Homebrewは不要です。
+
+```sh
+git clone https://github.com/mofu1224/DownloaderTools.git
+cd DownloaderTools
+sh scripts/start.sh
+```
+
+どちらの環境でも、初回はこのフォルダ内に実行環境を準備してからブラウザが開きます。同じMacでフォルダを移すと、次の起動時に仮想環境を再構築します。キャッシュが揃っていれば `DT_OFFLINE=1 sh scripts/start.sh` で通信せずに起動できます。Windows用とMac用の `runtime/` は共有できません。
 
 初回セットアップ・環境の再構築は次のコマンドでも実行できます。グローバルpip・npm・PATH・Python登録を変更せず、`runtime/`・`.venv/`・`.cache/`へ配置します。
 
@@ -50,6 +58,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap.ps1
 4. 「履歴」で結果とログを確認し、必要なSourceだけ新規再試行できます。
 5. 「認証」でNetscape TXT / JSON Cookieを取り込みます。更新は新しい不変版として取り込んで選択します。
 6. 「設定」で並列数、保存先、toolset、バックアップを管理します。
+
+**Pixivの作品・作品一覧**では、gallery-dlのPixiv APIがOAuthの更新トークンを必要とします。自分のアカウントで取得したトークンを `{"type":"pixiv-oauth","refresh_token":"取得した値"}` の形式で端末内の `pixiv-oauth.json` に保存し、「認証」で取り込みます。画像モードで対象URLを入力し、取り込んだ認証を選んでください。この認証は他サイト・動画モードでは使えません。トークンはCookieと同様に平文でローカルに保管されます。取り込み元ファイルを共有・コミットしないでください。
 
 既定の同時実行は全体2件、動画1件、画像1件、同一provider 1件です。後処理を起動し得るSourceも全体1件に制限します。画像の「画像・サイト内動画」もこの枠を使用します。
 
@@ -104,7 +114,7 @@ Sourceの「詳細」を開くと、実行ログを約1秒ごとに追記表示�
 
 Python依存は`uv.lock`、フロント依存は`frontend/package-lock.json`、各toolsetは`manifest.json`と`requirements.txt`に固定されます。SQLite公式配布は公式のSHA3-256で検証し、Node・FFmpegは配布元のSHA-256で検証します。各実行バイナリのSHA-256もtoolsetへ記録します。
 
-初回取得の検証値は`scripts/runtime-lock.json`とbootstrap内のuv固定値で管理します。FFmpegの取得URLは配布元で更新されるため、内容が固定値と違えば停止します。その場合はハッシュ検査を外さず、保守側で公式配布物を確認して固定値・契約試験を更新してください。
+Windowsの配布物は `scripts/runtime-lock.json` と `scripts/bootstrap.ps1`、Macの配布物とビルド用ソースは `scripts/bootstrap-macos.sh` に版と検証値を固定しています。ハッシュが一致しない場合、セットアップは停止します。
 
 ## バックアップ・復元
 
@@ -121,7 +131,7 @@ Python依存は`uv.lock`、フロント依存は`frontend/package-lock.json`、�
 ### 本体の更新・移動・削除
 
 - 更新前にアプリを終了し、現在の本体と`data/`、必要な`downloads/`を別の非公開フォルダへ退避してください。DBバックアップだけではCookie本文とメディアは復元できません。
-- 新しい版を別フォルダへクローンし、停止中の`data/`と`downloads/`を移して起動します。`runtime/`と`.cache/`も移せば取得済みの環境を再利用できます。外部保存先は移動対象外なので、設定で場所を確認してください。
+- 本体の更新では、新しい版を別フォルダへクローンし、停止中の `data/` と `downloads/` のコピーを移して起動します。Python・エンジンの版が変わる場合は旧 `runtime/` を移さず、新しい実行環境を準備してください。旧ツールセットに紐づく未完了項目は、設定で新しい有効版を確認して新規に登録します。外部保存先は設定で場所を確認してください。
 - 現行DBはスキーマv2です。v1は退避後に更新します。未知の新しい版は拒否します。旧アプリへ戻す場合は、旧アプリに対応する退避一式を使ってください。新DBを旧アプリで開けるとは限りません。
 - ログ・バックアップ・途中ファイルは自動で全削除しません。フォルダ全体を削除すると、内部のCookie・履歴・保存メディアも失われます。必要なデータを退避してから本体を削除してください。
 
@@ -162,11 +172,11 @@ Python依存は`uv.lock`、フロント依存は`frontend/package-lock.json`、�
 フロントの型検査・ビルド:
 
 ```powershell
-$env:PATH = "$PWD/runtime/build-tools/node-v24.14.1-win-x64;$env:PATH"
-.\runtime\build-tools\node-v24.14.1-win-x64\npm.cmd run build --prefix frontend
+$env:PATH = "$PWD/runtime/build-tools/node-v24.22.3-win-x64;$env:PATH"
+.\runtime\build-tools\node-v24.22.3-win-x64\npm.cmd run build --prefix frontend
 ```
 
-ブラウザ試験はWindowsのMicrosoft Edgeをheadlessで使用します。テスト用データは一時フォルダ内に分離し、外部サイトや利用者のCookieを使用しません。実エンジン試験はローカルHTTP fixtureから動画・画像を取得します。
+ブラウザ試験はWindowsではMicrosoft Edge、MacではPlaywrightのChromiumをヘッドレスで使用します。Macで試験する場合は、`export PLAYWRIGHT_BROWSERS_PATH="$PWD/.cache/playwright"` と `.venv/bin/python -m playwright install chromium --only-shell` を実行してから `.venv/bin/python -m pytest` を起動します。テスト用データは一時フォルダ内に分離し、外部サイトや利用者のCookieを使用しません。実エンジン試験はローカルHTTP fixtureから動画・画像を取得します。
 
 可搬性の検証（配布用コピーを別パスへ作り、オフライン準備・別CWD・非グローバルPATHで起動確認）:
 
@@ -180,6 +190,7 @@ $env:PATH = "$PWD/runtime/build-tools/node-v24.14.1-win-x64;$env:PATH"
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/audit_dependencies.py
+.\.venv\Scripts\python.exe scripts/audit_native.py
 ```
 
 クローン直後に相当する状態で初回取得・全検証・起動を確認する場合:
@@ -194,9 +205,9 @@ $env:PATH = "$PWD/runtime/build-tools/node-v24.14.1-win-x64;$env:PATH"
 
 ## 対応範囲
 
-- Windows x64のセットアップと実行を検証対象としています。
+- Windows x64（ローカルNTFS）とApple Silicon Mac（ローカルAPFS）を検証対象としています。Intel Mac・ネットワーク共有は対象外です。
 - 同梱物が揃ったコピーは、通信なしで移設先の準備と起動ができます。取得直後（同梱物なし）は初回に固定版を取得するため通信が必要です。
-- macOS向けの停止・ロック・フォルダ起動処理、`scripts/start.sh`は用意していますが、macOSのネイティブ配布物・SQLite差替え・移設は未検証です。Windowsの実行環境をそのままmacOSへコピーして起動する構成ではありません。
+- ネイティブ依存の照合は、アプリが使うPython・SQLite・Node・FFmpegの版をNVDと、uvの版を開発元の公開勧告と照合します。`scripts/audit_native.py` は未判定・照合失敗で非ゼロ終了し、結果を `.cache/native-audit.json` に保存します。OS、外部ツール内部の推移依存、任意に追加した旧ツールセットまでは網羅しません。
 - Pixivの作品（`/artworks/作品ID`）と作品一覧（`/users/投稿者ID/artworks`）は、画像モードの「保存オプション」で投稿日の範囲を指定できます。開始日・終了日は指定したタイムゾーンの現地日付で、どちらも当日を含みます。片方だけの指定も可能です。他サイトのURLが混じる場合や、検証済みのgallery-dl 1.32.16以外では受け付けません。期間外・投稿日時不明の項目は保存せず、詳細画面に理由別の件数を表示します。
 - 拡張子の固定リストで画像・動画を制限せず、Pillowまたはffprobeで内容を検証します（TIFF / BMPなども対象）。両方で内容を確認できない形式は公開を保留します。「画像のみ」では既知の動画・音声を取得前に除外し、未知の形式も保存前に確認します。
 - 総件数不明のときは割合やETAを推測しません。取得0件で理由を確定できない場合も成功扱いしません。

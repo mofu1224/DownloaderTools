@@ -1,6 +1,5 @@
 import asyncio
 import json
-import sqlite3
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
@@ -8,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from .database_driver import sqlite3
 from .domain import TERMINAL, BatchRequest, Profile, Settings, digest, provider
 from .gallery_dates import GALLERY_VERSION, supports_url
 
@@ -184,13 +184,17 @@ class Store:
             ):
                 raise ValueError("OUTPUT_NOT_FOUND")
             credential = values["credential_id"]
-            if (
-                credential
-                and not conn.execute(
-                    "SELECT 1 FROM credentials WHERE id=? AND path!=''", (credential,)
+            if credential:
+                entry = conn.execute(
+                    "SELECT path FROM credentials WHERE id=? AND path!=''", (credential,)
                 ).fetchone()
-            ):
-                raise ValueError("CREDENTIAL_REPLACEMENT_REQUIRED")
+                if not entry:
+                    raise ValueError("CREDENTIAL_REPLACEMENT_REQUIRED")
+                if entry["path"].endswith(".pixiv-token") and (
+                    profile.kind != "gallery"
+                    or not all(supports_url(url) for url in values["urls"])
+                ):
+                    raise ValueError("PIXIV_CREDENTIAL_SCOPE")
             tool = conn.execute("SELECT id,manifest FROM toolsets WHERE active=1").fetchone()
             if (profile.date_from or profile.date_to) and (
                 not all(supports_url(url) for url in values["urls"])
